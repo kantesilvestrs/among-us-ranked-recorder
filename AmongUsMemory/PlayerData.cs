@@ -56,18 +56,33 @@ namespace HamsterCheese.AmongUsMemory
             {
                 if (PlayerInfoPTROffset == IntPtr.Zero)
                 {
-                    var ptr =  Methods.Call_PlayerControl_GetData(this.PlayerControllPTR);
+                    var ptr = Methods.Call_PlayerControl_GetData(this.PlayerControllPTR);
                     PlayerInfoPTR = ptr.GetAddress();
-                    PlayerInfo pInfo = Utils.FromBytes<PlayerInfo>(Cheese.mem.ReadBytes(PlayerInfoPTR, Utils.SizeOf<PlayerInfo>()));
-                    PlayerInfoPTROffset = new IntPtr(ptr);
-                    playerInfo = pInfo;
+                    var pInfoBytes = Cheese.mem.ReadBytes(PlayerInfoPTR, Utils.SizeOf<PlayerInfo>());
+                    if (pInfoBytes != null)
+                    {
+                        PlayerInfo pInfo = Utils.FromBytes<PlayerInfo>(pInfoBytes);
+                        PlayerInfoPTROffset = new IntPtr(ptr);
+                        playerInfo = pInfo;
+                    }
+                    else
+                    {
+                        playerInfo = null;
+                    }
                     return playerInfo;
-
                 }
                 else
                 {
-                    PlayerInfo pInfo = Utils.FromBytes<PlayerInfo>(Cheese.mem.ReadBytes(PlayerInfoPTR, Utils.SizeOf<PlayerInfo>()));
-                    playerInfo = pInfo;
+                    var pInfoBytes = Cheese.mem.ReadBytes(PlayerInfoPTR, Utils.SizeOf<PlayerInfo>());
+                    if (pInfoBytes != null)
+                    {
+                        PlayerInfo pInfo = Utils.FromBytes<PlayerInfo>(pInfoBytes);
+                        playerInfo = pInfo;
+                    }
+                    else
+                    {
+                        playerInfo = null;
+                    }
                     return playerInfo;
                 }
 
@@ -78,26 +93,26 @@ namespace HamsterCheese.AmongUsMemory
         public void StopObserveState()
         {
             var key = Tokens.ContainsKey("ObserveState");
-            if(key)
+            if (key)
             {
                 if (Tokens["ObserveState"].IsCancellationRequested == false)
                 {
                     Tokens["ObserveState"].Cancel();
                     Tokens.Remove("ObserveState");
                 }
-            } 
+            }
         }
-        
+
         public void StartObserveState()
         {
-            if(Tokens.ContainsKey("ObserveState"))
+            if (Tokens.ContainsKey("ObserveState"))
             {
                 //Console.WriteLine("Already Observed!");
                 return;
             }
             else
             {
-                CancellationTokenSource cts = new CancellationTokenSource(); 
+                CancellationTokenSource cts = new CancellationTokenSource();
                 Task.Factory.StartNew(() =>
                 {
                     while (true)
@@ -111,25 +126,29 @@ namespace HamsterCheese.AmongUsMemory
                                 onDie?.Invoke(name);
                             }
 
-                            if(observe_disconnectFlag == false && PlayerInfo.Value.Disconnected == 1)
+                            if (observe_disconnectFlag == false && PlayerInfo.Value.Disconnected == 1)
                             {
                                 observe_disconnectFlag = true;
                                 var name = HamsterCheese.AmongUsMemory.Utils.ReadString(PlayerInfo.Value.PlayerName);
                                 onDisconnect?.Invoke(name);
                             }
                         }
-                        System.Threading.Thread.Sleep(25); 
+                        System.Threading.Thread.Sleep(25);
                     }
                 }, cts.Token);
 
                 Tokens.Add("ObserveState", cts);
             }
-          
+
         }
 
         public void ReadMemory()
         {
-            Instance = Utils.FromBytes<PlayerControl>(Cheese.mem.ReadBytes(PlayerControllPTROffset, Utils.SizeOf<PlayerControl>()));
+            var playerControlBytes = Cheese.mem.ReadBytes(PlayerControllPTROffset, Utils.SizeOf<PlayerControl>());
+            if (playerControlBytes != null)
+            {
+                Instance = Utils.FromBytes<PlayerControl>(playerControlBytes);
+            }
         }
 
         public bool IsLocalPlayer

@@ -12,12 +12,12 @@ namespace MonoUtil
         { 
             if(args.Length != 0)
             {
-                //Console.WriteLine(args[0]);
+                Console.WriteLine(args[0]);
                 HamsterCheese.StructGenerator.Generator.Generate(args[0], args[1]);
                 return;
             }
-            //Console.WriteLine(args[0]);
-                HamsterCheese.StructGenerator.Generator.Generate(@"C:\Users\shlif\OneDrive\Documents\GitHub\AmongUsMemory\AmongUsMemory\XmlStructs", null); 
+               //Console.WriteLine(args[0]);
+                HamsterCheese.StructGenerator.Generator.Generate(@"D:\work\HackAmongUs\AmongUsMemory\YourCheese\bin\Release\XmlStructs", null); 
 
                 System.Threading.Thread.Sleep(99999);
         }

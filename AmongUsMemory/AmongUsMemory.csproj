@@ -30,6 +30,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Memory, Version=1.2.19.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Memory.dll.1.2.19\lib\net472\Memory.dll</HintPath>

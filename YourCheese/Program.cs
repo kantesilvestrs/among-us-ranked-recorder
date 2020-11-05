@@ -74,7 +74,7 @@ namespace YourCheese
             int aliveCrewmates = crewmates.FindAll((crewmate) => crewmate.PlayerInfo.Value.Disconnected != 1 && crewmate.PlayerInfo.Value.IsDead == 0)
                 .Count();
 
-        
+
             var winners = playerDataList
                     .FindAll((playerData) => playerData.PlayerInfo.Value.IsImpostor == (aliveCrewmates > aliveImpostors ? 0 : 1))
                     .Select((playerData) => GetPlayerName(playerData.PlayerInfo.Value.PlayerName))
@@ -85,19 +85,32 @@ namespace YourCheese
 
         static void Main()
         {
-            Console.WriteLine("Starting up Among Us MMR Result Recorder...");
             StreamWriter resultsFile = null;
             string newGameFileName = null;
             bool validGameSession = false;
+            List<string> deadPlayers = new List<string>();
+            List<string> disconnectedPlayers = new List<string>();
 
             Console.SetWindowSize(80, 25);
 
-            // Initialize result recorder
-            if (HamsterCheese.AmongUsMemory.Cheese.Init())
+            bool amongUsProcessAvailable = HamsterCheese.AmongUsMemory.Cheese.Init();
+
+            while (!amongUsProcessAvailable)
             {
+                Console.Clear();
+                Console.WriteLine("Waiting for game process...");
+                amongUsProcessAvailable = HamsterCheese.AmongUsMemory.Cheese.Init();
+                System.Threading.Thread.Sleep(1000);
+            }
+
+            // Initialize result recorder
+            if (amongUsProcessAvailable)
+            {
+                Console.WriteLine("Starting up Among Us MMR Result Recorder...");
                 // Start a new recording on each session
                 HamsterCheese.AmongUsMemory.Cheese.ObserveShipStatus((x) =>
                 {
+                    Console.WriteLine("Cleaning out any previous sessions...");
                     // Stop player observing
                     foreach (var player in playerDatas)
                         player.StopObserveState();
@@ -121,6 +134,7 @@ namespace YourCheese
                         validGameSession = false;
                     }
 
+                    Console.WriteLine("Getting information about players...");
                     playerDatas = HamsterCheese.AmongUsMemory.Cheese.GetAllPlayers();
 
                     if (playerDatas.Count() < 1)
@@ -153,23 +167,36 @@ namespace YourCheese
                         Console.WriteLine("Registering players...");
                         foreach (var data in playerDatas)
                         {
-                            var Name = HamsterCheese.AmongUsMemory.Utils.ReadString(data.PlayerInfo.Value.PlayerName);
-                            resultsFile.WriteLine($"ADD_PLAYER, {Name}, {Colors[data.PlayerInfo.Value.ColorId]}, {data.PlayerInfo.Value.IsImpostor.ToString()}");
+                            if (data.PlayerInfo != null)
+                            {
+                                var Name = HamsterCheese.AmongUsMemory.Utils.ReadString(data.PlayerInfo.Value.PlayerName);
+                                resultsFile.WriteLine($"ADD_PLAYER, {Name}, {Colors[data.PlayerInfo.Value.ColorId]}, {data.PlayerInfo.Value.IsImpostor.ToString()}");
+                            }
                         }
 
 
                         foreach (var player in playerDatas)
                         {
+                            player.onDie = null;
                             player.onDie += (name) =>
                             {
-                                //Console.WriteLine("Player Died:" + Colors[colorId]);
-                                resultsFile.WriteLine($"PLAYER_DEAD_OR_VOTED_OFF, {name}");
+                                if (!deadPlayers.Any((deadPlayer) => deadPlayer == name))
+                                {
+                                    deadPlayers.Add(name);
+                                    //Console.WriteLine("Player Died:" + Colors[colorId]);
+                                    resultsFile.WriteLine($"PLAYER_DEAD_OR_VOTED_OFF, {name}");
+                                }
                             };
 
+                            player.onDisconnect = null;
                             player.onDisconnect += (name) =>
                             {
-                                Console.WriteLine($"{name} has disconnected from the game.");
-                                resultsFile.WriteLine($"PLAYER_DISCONNECTED, {name}");
+                                if(!disconnectedPlayers.Any((dcPlayer) => dcPlayer == name))
+                                {
+                                    disconnectedPlayers.Add(name);
+                                    Console.WriteLine($"{name} has disconnected from the game.");
+                                    resultsFile.WriteLine($"PLAYER_DISCONNECTED, {name}");
+                                }
                             };
 
                             // player state check
@@ -184,7 +211,7 @@ namespace YourCheese
 
             }
 
-            System.Threading.Thread.Sleep(1000000);
+            System.Threading.Thread.Sleep(86400000);
         }
     }
 }

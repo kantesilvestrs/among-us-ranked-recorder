@@ -48,7 +48,7 @@ namespace HamsterCheese.AmongUsMemory
                     Console.WriteLine("New game session started...");
                 }
                 else
-                { 
+                {
 
                 }
             }
@@ -78,29 +78,35 @@ namespace HamsterCheese.AmongUsMemory
         /// </summary>
         /// <returns></returns>
         public static ShipStatus GetShipStatus()
-        { 
+        {
             ShipStatus shipStatus = new ShipStatus();
             byte[] shipAob = Cheese.mem.ReadBytes(Pattern.ShipStatus_Pointer, Utils.SizeOf<ShipStatus>());
-            var aobStr = MakeAobString(shipAob, 4, "00 00 00 00 ?? ?? ?? ??");
-            var aobResults = Cheese.mem.AoBScan(/*0x04000000, 0x08000000,*/ aobStr, true, true); 
-            aobResults.Wait();  
-            foreach (var result in aobResults.Result)
+            if (shipAob != null)
             {
-
-                byte[] resultByte = Cheese.mem.ReadBytes(result.GetAddress(), Utils.SizeOf<ShipStatus>());
-                ShipStatus resultInst = Utils.FromBytes<ShipStatus>(resultByte); 
-                if (resultInst.AllVents != IntPtr.Zero && resultInst.NetId < uint.MaxValue - 10000)
+                var aobStr = MakeAobString(shipAob, 4, "00 00 00 00 ?? ?? ?? ??");
+                var aobResults = Cheese.mem.AoBScan(/*0x04000000, 0x08000000,*/ aobStr, true, true);
+                aobResults.Wait();
+                foreach (var result in aobResults.Result)
                 {
-                    if (resultInst.MapScale < 6470545000000 && resultInst.MapScale > 0.1f)
-                    {  
-                        shipStatus = resultInst;  
-                        //Console.WriteLine(result.GetAddress());
+
+                    byte[] resultByte = Cheese.mem.ReadBytes(result.GetAddress(), Utils.SizeOf<ShipStatus>());
+                    if (resultByte != null)
+                    {
+                        ShipStatus resultInst = Utils.FromBytes<ShipStatus>(resultByte);
+                        if (resultInst.AllVents != IntPtr.Zero && resultInst.NetId < uint.MaxValue - 10000)
+                        {
+                            if (resultInst.MapScale < 6470545000000 && resultInst.MapScale > 0.1f)
+                            {
+                                shipStatus = resultInst;
+                                //Console.WriteLine(result.GetAddress());
+                            }
+                        }
                     }
                 }
-            }  
+            }
             return shipStatus;
         }
-         
+
 
         public static string MakeAobString(byte[] aobTarget, int length, string unknownText = "?? ?? ?? ??")
         {
@@ -134,33 +140,36 @@ namespace HamsterCheese.AmongUsMemory
         /// <returns></returns>
         public static List<PlayerData> GetAllPlayers()
         {
-            List<PlayerData > datas = new List<PlayerData>();
+            List<PlayerData> datas = new List<PlayerData>();
 
             // find player pointer
             byte[] playerAoB = Cheese.mem.ReadBytes(Pattern.PlayerControl_Pointer, Utils.SizeOf<PlayerControl>());
             // aob pattern
-            string aobData = MakeAobString(playerAoB, 4, "?? ?? ?? ??"); 
+            string aobData = MakeAobString(playerAoB, 4, "?? ?? ?? ??");
             // get result 
             var result = Cheese.mem.AoBScan(/*0x04000000, 0x08000000,*/ aobData, true, true);
             result.Wait();
 
 
 
-            var results =    result.Result;
+            var results = result.Result;
             // real-player
             foreach (var x in results)
             {
                 var bytes = Cheese.mem.ReadBytes(x.GetAddress(), Utils.SizeOf<PlayerControl>());
-                var PlayerControl = Utils.FromBytes<PlayerControl>(bytes);
-                // filter garbage instance datas.
-                if (PlayerControl.SpawnFlags == 257 && PlayerControl.NetId < uint.MaxValue - 10000)
+                if (bytes != null)
                 {
-                    datas.Add(new PlayerData()
+                    var PlayerControl = Utils.FromBytes<PlayerControl>(bytes);
+                    // filter garbage instance datas.
+                    if (PlayerControl.SpawnFlags == 257 && PlayerControl.NetId < uint.MaxValue - 10000)
                     {
-                        Instance = PlayerControl,
-                        PlayerControllPTROffset = x.GetAddress(),
-                        PlayerControllPTR = new IntPtr((int)x)
-                    });
+                        datas.Add(new PlayerData()
+                        {
+                            Instance = PlayerControl,
+                            PlayerControllPTROffset = x.GetAddress(),
+                            PlayerControllPTR = new IntPtr((int)x)
+                        });
+                    }
                 }
             }
             Console.WriteLine("Player count: " + datas.Count);
